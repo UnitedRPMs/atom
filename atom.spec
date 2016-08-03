@@ -12,14 +12,15 @@
 
 %global project atom
 %global repo %{project}
-%global electron_ver 0.37.7
+%global electron_ver 0.37.8
+%global node_ver 0.12
 
 # commit
-%global _commit 1b3da6b4b7ce479494f7d9444192c34ad9f3fda3
+%global _commit e4ee1f96529722b9117f28ff2f576782b3ccba32
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 Name:    atom
-Version: 1.7.3
+Version: 1.9.2
 Release: 1.git%{_shortcommit}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -34,12 +35,14 @@ Patch2:  use-system-apm.patch
 Patch3:  use-system-electron.patch
 
 # In fc25, the nodejs contains /bin/npm, and it do not depend node-gyp
-BuildRequires: npm, wget
+BuildRequires: git
+BuildRequires: libtool
+BuildRequires: /usr/bin/npm
 BuildRequires: node-gyp
 BuildRequires: nodejs-packaging
 BuildRequires: nodejs-atom-package-manager
 Requires: nodejs-atom-package-manager
-Requires: electron
+Requires: electron = %{electron_ver}
 Requires: desktop-file-utils
 
 %description
@@ -52,6 +55,7 @@ Visit https://atom.io to learn more.
 %prep
 %setup -q -n %repo-%{_commit}
 sed -i 's|<lib>|%{_lib}|g' %{P:0} %{P:3}
+sed -i 's|<version>|%{electron_ver}|' %{P:0}
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
@@ -63,13 +67,18 @@ sed -e "s|, 'generate-asar'||" -i build/Gruntfile.coffee
 # They are known to leak data to GitHub, Google Analytics and Bugsnag.com.
 sed -i -E -e '/(exception-reporting|metrics)/d' package.json
 
-# Update nodegit 0.12.2 for electron 0.37.5
-sed -i '/nodegit/s|12.0|12.2|' package.json
-
 %build
 # Hardened package
 export CFLAGS="%{optflags} -fPIC -pie"
 export CXXFLAGS="%{optflags} -fPIC -pie"
+
+# Update node for fc23 and el7
+%if 0%{?fedora} < 24 || 0%{?rhel}
+git clone https://github.com/creationix/nvm.git .nvm
+source .nvm/nvm.sh
+nvm install %{node_ver}
+nvm use %{node_ver}
+%endif
 
 # Build package
 node-gyp -v; node -v; npm -v; apm -v
@@ -114,33 +123,36 @@ _packagesToDedupe=(
 )
 
 # Fix nodegit build error for node 0.10
-#npm install nodegit --ignore-scripts --verbose && pushd node_modules/nodegit && \
-#npm install; cp vendor/libssh2/win32/libssh2_config.h vendor/libssh2/include && \
-#node-gyp configure rebuild --target="%{electron_ver}" --target_platform=linux \
-#  --arch="%{arch}" --dist-url="$npm_config_disturl" && popd
-nodeVer=`node -v`
-File="nodegit-v0.12.2-electron-v0.37-linux-%{arch}.tar.gz"
-URL="https://nodegit.s3.amazonaws.com/nodegit/nodegit/$File"
-if [ "${nodeVer:1:4}" == '0.10' ]; then
-    npm install nodegit --verbose
-    wget "$URL"; tar xf "$File"; rm -f "$File"
-    mkdir node_modules/nodegit/build
-    mv Release node_modules/nodegit/build
-fi
+#https://github.com/tensor5/arch-atom/commit/afc1d1b19ba8040e3b2c1274b9f7fea426c692cd
+npm install nodegit --ignore-scripts --verbose
+pushd node_modules/nodegit
+  npm install --ignore-scripts
+  cp vendor/libssh2/win32/libssh2_config.h vendor/libssh2/include
+  pushd vendor/libssh2
+    autoreconf -ivf
+    ./configure
+  popd
+  node_gyp="node_modules/.bin/node-gyp"
+  $node_gyp configure rebuild --target="%{electron_ver}" --target_platform="linux" \
+  --runtime="electron" --arch="%{arch}" --dist-url="$npm_config_disturl"
+  echo 'Removing NodeGit devDependencies...'
+  npm prune --production
+popd
 
-# Installing packages
+# Installing atom dependencies
 #apm clean
 apm install --verbose
 apm dedupe ${_packagesToDedupe[@]}
-# Installing build modules
+
+# Installing build tools
 pushd build
 npm install --loglevel info
 popd
-script/grunt --build-dir='atom-build' --channel=stable
+script/grunt --channel=stable
 
 %install
 install -d %{buildroot}%{_libdir}/%{name}
-cp -r atom-build/Atom/resources/app/* %{buildroot}%{_libdir}/%{name}
+cp -r out/Atom/resources/app/* %{buildroot}%{_libdir}/%{name}
 rm -rf %{buildroot}%{_libdir}/%{name}/node_modules
 
 install -d %{buildroot}%{_datadir}/applications
@@ -152,18 +164,18 @@ sed -e \
     resources/linux/atom.desktop.in > \
     %{buildroot}%{_datadir}/applications/%{name}.desktop
 
-install -Dm0755 atom-build/Atom/resources/new-app/atom.sh \
+install -Dm0755 out/Atom/resources/new-app/atom.sh \
     %{buildroot}%{_bindir}/%{name}
 
 # copy over icons in sizes that most desktop environments like
 for i in 1024 512 256 128 64 48 32 24 16; do
-    install -D -m 0644 atom-build/icons/${i}.png \
+    install -D -m 0644 out/icons/${i}.png \
       %{buildroot}%{_datadir}/icons/hicolor/${i}x${i}/apps/%{name}.png
 done
 
 # find all *.js files and generate node.file-list
-pushd atom-build/Atom/resources/app
-for ext in js json node types less png svg; do
+pushd out/Atom/resources/app
+for ext in js jsm json coffee map node types less png svg aff dic; do
     find node_modules -regextype posix-extended \
       -iname \*.${ext} \
     ! -name '.*' \
@@ -205,6 +217,39 @@ fi
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
+* Wed Aug 03 2016 Pavlo Rudyi <paulcarroty at riseup.net> - 1.9.2-1.gitce4ee1f
+- Update to 1.9.2
+
+* Tue Aug  2 2016 mosquito <sensor.wen@gmail.com> - 1.9.0-1.git59b62a2
+- Release 1.9.0
+* Fri Jun 17 2016 mosquito <sensor.wen@gmail.com> - 1.8.0-2.gitf89b273
+- Build for electron 0.37.8
+* Thu Jun  9 2016 mosquito <sensor.wen@gmail.com> - 1.8.0-1.gitf89b273
+- Release 1.8.0
+- Build for electron 1.2.2
+- Fix tree-view does not work
+  https://github.com/FZUG/repo/issues/120
+* Tue May 31 2016 mosquito <sensor.wen@gmail.com> - 1.7.4-4.git6bed3e5
+- Use node-gyp@3.0.3 for el7, system node-gyp doesn't support
+  the if-else conditions syntax
+  See https://github.com/JCMais/node-libcurl/issues/56
+* Tue May 31 2016 mosquito <sensor.wen@gmail.com> - 1.7.4-3.git6bed3e5
+- Remove --build-dir option
+- Update to settings-view@0.238.0
+- Fix height error on install page
+  https://github.com/FZUG/repo/issues/116
+* Mon May 30 2016 mosquito <sensor.wen@gmail.com> - 1.7.4-2.git6bed3e5
+- Fix settings-view dont work
+  https://github.com/FZUG/repo/issues/114
+* Thu May 26 2016 mosquito <sensor.wen@gmail.com> - 1.7.4-1.git6bed3e5
+- Release 1.7.4
+- Build for electron 1.2.0
+- Build nodegit 0.12.2 from source code
+- Add BReq libtool and git
+- Update node 0.12 for fedora 23
+* Thu May 26 2016 mosquito <sensor.wen@gmail.com> - 1.7.3-2.git1b3da6b
+- Fix spell-check dont work
+  https://github.com/FZUG/repo/issues/110
 * Fri Apr 29 2016 mosquito <sensor.wen@gmail.com> - 1.7.3-1.git1b3da6b
 - Release 1.7.3
 - Build for electron 0.37.7
