@@ -13,14 +13,14 @@
 %global project atom
 %global repo %{project}
 %global electron_ver 0.37.8
-%global node_ver 0.12
+%global node_ver 4.4.5
 
 # commit
-%global _commit 13bd769589e55d835db3f57ca9b07ebf47557162
+%global _commit 4f3b013b6e99aa0bfb53753aee9bbc3e9fb23217
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 Name:    atom
-Version: 1.9.9
+Version: 1.10.0
 Release: 1.git%{_shortcommit}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -218,6 +218,9 @@ fi
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
+* Tue Sep 6 2016 Pavlo Rudyi <paulcarroty at riseup.net> - 1.10.0-1.git4f3b013
+- Update to 1.10.0
+
 * Sat Aug 13 2016 Pavlo Rudyi <paulcarroty at riseup.net> - 1.9.9-1.git13bd769
 - Update to 1.9.9
  
