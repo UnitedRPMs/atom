@@ -29,10 +29,10 @@ License: MIT
 URL:     https://atom.io/
 Source0: https://github.com/atom/atom/archive/%{_commit}/%{repo}-%{_shortcommit}.tar.gz
 
-Patch0:  fix-atom-sh.patch
-Patch1:  fix-license-path.patch
-Patch2:  use-system-apm.patch
-Patch3:  use-system-electron.patch
+Patch0:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/fix-atom-sh.patch
+Patch1:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/fix-license-path.patch
+Patch2:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/use-system-apm.patch
+Patch3:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/use-system-electron.patch
 
 # In fc25, the nodejs contains /bin/npm, and it do not depend node-gyp
 BuildRequires: git
