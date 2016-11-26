@@ -13,14 +13,14 @@
 %global project atom
 %global repo %{project}
 %global electron_ver 0.37.8
-%global node_ver 4.4.5
+%global node_ver 6
 
 # commit
-%global _commit 4f3b013b6e99aa0bfb53753aee9bbc3e9fb23217
+%global _commit 0ecc15013866194a3b97713df97ce7391ac916e5
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 Name:    atom
-Version: 1.10.0
+Version: 1.11.2
 Release: 1.git%{_shortcommit}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -41,9 +41,11 @@ BuildRequires: /usr/bin/npm
 BuildRequires: node-gyp
 BuildRequires: nodejs-packaging
 BuildRequires: nodejs-atom-package-manager
+BuildRequires: libxkbfile-devel
 Requires: nodejs-atom-package-manager
 Requires: electron = %{electron_ver}
 Requires: desktop-file-utils
+Requires: gvfs
 
 %description
 Atom is a text editor that's modern, approachable, yet hack-able to the core
@@ -60,9 +62,6 @@ sed -i 's|<version>|%{electron_ver}|' %{P:0}
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-
-# apm with system (updated) nodejs cannot 'require' modules inside asar
-sed -e "s|, 'generate-asar'||" -i build/Gruntfile.coffee
 
 # They are known to leak data to GitHub, Google Analytics and Bugsnag.com.
 sed -i -E -e '/(exception-reporting|metrics)/d' package.json
@@ -123,40 +122,23 @@ _packagesToDedupe=(
     'temp'
 )
 
-# Fix nodegit build error for node 0.10
-#https://github.com/tensor5/arch-atom/commit/afc1d1b19ba8040e3b2c1274b9f7fea426c692cd
-npm install nodegit --ignore-scripts --verbose
-pushd node_modules/nodegit
-  npm install --ignore-scripts
-  cp vendor/libssh2/win32/libssh2_config.h vendor/libssh2/include
-  pushd vendor/libssh2
-    autoreconf -ivf
-    ./configure
-  popd
-  node_gyp="node_modules/.bin/node-gyp"
-  $node_gyp configure rebuild --target="%{electron_ver}" --target_platform="linux" \
-  --runtime="electron" --arch="%{arch}" --dist-url="$npm_config_disturl"
-  echo 'Removing NodeGit devDependencies...'
-  npm prune --production
-popd
-
 # Installing atom dependencies
 #apm clean
 apm install --verbose
 apm dedupe ${_packagesToDedupe[@]}
 
 # Installing build tools
-pushd build
+pushd script/
 npm install --loglevel info
-popd
-script/grunt --channel=stable
+node build
 
 %install
-install -d %{buildroot}%{_libdir}/%{name}
-cp -r out/Atom/resources/app/* %{buildroot}%{_libdir}/%{name}
-rm -rf %{buildroot}%{_libdir}/%{name}/node_modules
+install -d %{buildroot}%{_libdir}/%{name}/
+cp -r out/app/* %{buildroot}%{_libdir}/%{name}/
+cp -r keymaps menus %{buildroot}%{_libdir}/%{name}/
+rm -rf %{buildroot}%{_libdir}/%{name}/node_modules/
 
-install -d %{buildroot}%{_datadir}/applications
+install -d %{buildroot}%{_datadir}/applications/
 sed -e \
    's|<%= appName %>|Atom|
     s|<%= description %>|%{summary}|
@@ -165,26 +147,26 @@ sed -e \
     resources/linux/atom.desktop.in > \
     %{buildroot}%{_datadir}/applications/%{name}.desktop
 
-install -Dm0755 out/Atom/resources/new-app/atom.sh \
-    %{buildroot}%{_bindir}/%{name}
+install -Dm0755 atom.sh %{buildroot}%{_bindir}/%{name}
 
 # copy over icons in sizes that most desktop environments like
 for i in 1024 512 256 128 64 48 32 24 16; do
-    install -D -m 0644 out/icons/${i}.png \
+    install -Dm0644 resources/app-icons/stable/png/${i}.png \
       %{buildroot}%{_datadir}/icons/hicolor/${i}x${i}/apps/%{name}.png
 done
 
 # find all *.js files and generate node.file-list
-pushd out/Atom/resources/app
+pushd out/app/
 for ext in js jsm json coffee map node types less png svg aff dic; do
     find node_modules -regextype posix-extended \
-      -iname \*.${ext} \
+      -iname \*.${ext} -print \
     ! -name '.*' \
     ! -path '*test*' \
     ! -path '*example*' \
     ! -path '*sample*' \
-    ! -path '*benchmark*' \
-      -exec install -Dm644 '{}' '%{buildroot}%{_libdir}/%{name}/{}' \;
+    ! -path '*benchmark*', \
+      -regex '.*shortest_path.*' -print | \
+      xargs -i -n1 install -Dm644 '{}' '%{buildroot}%{_libdir}/%{name}/{}' ||:
 done
 popd
 
@@ -218,12 +200,19 @@ fi
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
-* Tue Sep 6 2016 Pavlo Rudyi <paulcarroty at riseup.net> - 1.10.0-1.git4f3b013
-- Update to 1.10.0
-
-* Sat Aug 13 2016 Pavlo Rudyi <paulcarroty at riseup.net> - 1.9.9-1.git13bd769
-- Update to 1.9.9
- 
+* Thu Oct 20 2016 mosquito <sensor.wen@gmail.com> - 1.11.2-1.git0ecc150
+- Release 1.11.2
+* Thu Oct 20 2016 mosquito <sensor.wen@gmail.com> - 1.11.1-2.git099ffef
+- Fix cannot find shortest_path_tree module
+* Sat Oct 15 2016 mosquito <sensor.wen@gmail.com> - 1.11.1-1.git099ffef
+- Release 1.11.1
+- Replace Grunt-based build system. See https://github.com/atom/atom/pull/12410
+* Mon Sep 26 2016 mosquito <sensor.wen@gmail.com> - 1.10.2-1.git3ae8b29
+- Release 1.10.2
+* Fri Sep  2 2016 mosquito <sensor.wen@gmail.com> - 1.10.0-1.git4f3b013
+- Release 1.10.0
+* Sun Aug  7 2016 mosquito <sensor.wen@gmail.com> - 1.9.6-1.gite0801e7
+- Release 1.9.6
 * Sat Aug  6 2016 mosquito <sensor.wen@gmail.com> - 1.9.5-1.git4c1a1e3
 - Release 1.9.5
 * Fri Aug  5 2016 mosquito <sensor.wen@gmail.com> - 1.9.4-1.gita222879
