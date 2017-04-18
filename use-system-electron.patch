@@ -9,7 +9,7 @@
  
  // Needed so we can require src/module-cache.coffee during generateModuleCache
  require('coffee-script/register')
-@@ -33,7 +33,7 @@
+@@ -35,7 +35,7 @@
  const generateAPIDocs = require('./lib/generate-api-docs')
  const generateMetadata = require('./lib/generate-metadata')
  const generateModuleCache = require('./lib/generate-module-cache')
@@ -18,14 +18,12 @@
  const packageApplication = require('./lib/package-application')
  const prebuildLessCache = require('./lib/prebuild-less-cache')
  const transpileBabelPaths = require('./lib/transpile-babel-paths')
-@@ -55,10 +55,10 @@
+@@ -58,9 +58,9 @@
  generateModuleCache()
  prebuildLessCache()
  generateMetadata()
 -generateAPIDocs()
--downloadChromedriver()
 +//generateAPIDocs()
-+//downloadChromedriver()
  dumpSymbols()
 -  .then(packageApplication)
 +//  .then(packageApplication)
@@ -34,14 +32,15 @@
        if (argv.codeSign) {
 --- a/package.json
 +++ b/package.json
-@@ -12,7 +12,6 @@
+@@ -12,7 +12,7 @@
      "url": "https://github.com/atom/atom/issues"
    },
    "license": "MIT",
--  "electronVersion": "0.37.8",
+-  "electronVersion": "1.3.13",
++  "electronVersion": "<version>",
    "dependencies": {
      "async": "0.2.6",
-     "atom-keymap": "6.3.2",
+     "atom-keymap": "7.1.20",
 --- a/src/module-cache.coffee
 +++ b/src/module-cache.coffee
 @@ -194,8 +194,8 @@
@@ -57,7 +56,7 @@
    cache.builtins.atom ?= path.join(cache.resourcePath, 'exports', 'atom.js')
 --- a/src/package-manager.coffee
 +++ b/src/package-manager.coffee
-@@ -521,7 +521,7 @@
+@@ -539,7 +539,7 @@
  
    isBundledPackagePath: (packagePath) ->
      if @devMode
@@ -68,12 +67,12 @@
      packagePath?.startsWith(@resourcePathWithTrailingSlash)
 --- a/static/index.js
 +++ b/static/index.js
-@@ -29,7 +29,7 @@
-         throw loadSettingsError
-       }
+@@ -24,7 +24,7 @@
+       // Normalize to make sure drive letter case is consistent on Windows
+       process.resourcesPath = path.normalize(process.resourcesPath)
  
--      var devMode = loadSettings.devMode || !loadSettings.resourcePath.startsWith(process.resourcesPath + path.sep)
-+      var devMode = loadSettings.devMode || !loadSettings.resourcePath.startsWith('/usr/<lib>/atom')
+-      var devMode = getWindowLoadSettings().devMode || !getWindowLoadSettings().resourcePath.startsWith(process.resourcesPath + path.sep)
++      var devMode = getWindowLoadSettings().devMode || !getWindowLoadSettings().resourcePath.startsWith('/usr/<lib>/atom')
  
        if (devMode) {
          setupDeprecatedPackages()

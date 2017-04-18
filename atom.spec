@@ -12,15 +12,15 @@
 
 %global project atom
 %global repo %{project}
-%global electron_ver 0.37.8
+%global electron_ver 1.3.13
 %global node_ver 6
 
 # commit
-%global _commit 0ecc15013866194a3b97713df97ce7391ac916e5
+%global _commit 3e457f3375b519fc0a78f593c3b96eb0e337b227
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 Name:    atom
-Version: 1.11.2
+Version: 1.15.0
 Release: 1.git%{_shortcommit}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -28,11 +28,13 @@ Group:   Applications/Editors
 License: MIT
 URL:     https://atom.io/
 Source0: https://github.com/atom/atom/archive/%{_commit}/%{repo}-%{_shortcommit}.tar.gz
+Source1: use-system-ctags.patch
 
-Patch0:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/fix-atom-sh.patch
-Patch1:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/fix-license-path.patch
-Patch2:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/use-system-apm.patch
-Patch3:  https://raw.githubusercontent.com/UnitedRPMs/atom/master/use-system-electron.patch
+Patch0:  fix-atom-sh.patch
+Patch1:  fix-license-path.patch
+Patch2:  fix-restart.patch
+Patch3:  use-system-apm.patch
+Patch4:  use-system-electron.patch
 
 # In fc25, the nodejs contains /bin/npm, and it do not depend node-gyp
 BuildRequires: git
@@ -46,6 +48,7 @@ Requires: nodejs-atom-package-manager
 Requires: electron = %{electron_ver}
 Requires: desktop-file-utils
 Requires: gvfs
+Requires: ctags
 
 %description
 Atom is a text editor that's modern, approachable, yet hack-able to the core
@@ -56,12 +59,13 @@ Visit https://atom.io to learn more.
 
 %prep
 %setup -q -n %repo-%{_commit}
-sed -i 's|<lib>|%{_lib}|g' %{P:0} %{P:3}
-sed -i 's|<version>|%{electron_ver}|' %{P:0}
+sed -i 's|<lib>|%{_lib}|g' %{P:0} %{P:2} %{P:4}
+sed -i 's|<version>|%{electron_ver}|' %{P:0} %{P:4}
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 # They are known to leak data to GitHub, Google Analytics and Bugsnag.com.
 sed -i -E -e '/(exception-reporting|metrics)/d' package.json
@@ -71,25 +75,28 @@ sed -i -E -e '/(exception-reporting|metrics)/d' package.json
 export CFLAGS="%{optflags} -fPIC -pie"
 export CXXFLAGS="%{optflags} -fPIC -pie"
 
-# Update node for fc23 and el7
-%if 0%{?fedora} < 24 || 0%{?rhel}
+# Update node for fc23
+%if 0%{?fedora} < 24
+%if ! 0%{?rhel}
 git clone https://github.com/creationix/nvm.git .nvm; cd .nvm
-git checkout v0.31.2; cd ..
+git checkout v0.33.0; cd ..
 source .nvm/nvm.sh
 nvm install %{node_ver}
 nvm use %{node_ver}
 %endif
+%endif
 
 # Build package
 node-gyp -v; node -v; npm -v; apm -v
-## https://github.com/atom/atom/blob/master/script/bootstrap
+
 # If unset, ~/.atom/.node-gyp/.atom/.npm is used
 ## https://github.com/atom/electron/blob/master/docs/tutorial/using-native-node-modules.md
 npm_config_cache="${HOME}/.atom/.npm"
 npm_config_disturl="https://atom.io/download/atom-shell"
 npm_config_target="%{electron_ver}"
-#export npm_config_target_arch="x64|ia32"
+#npm_config_target_arch="x64|ia32"
 npm_config_runtime="electron"
+
 # The npm_config_target is no effect, set ATOM_NODE_VERSION
 ## https://github.com/atom/apm/blob/master/src/command.coffee
 export ATOM_ELECTRON_VERSION="%{electron_ver}"
@@ -97,35 +104,13 @@ export ATOM_ELECTRON_URL="$npm_config_disturl"
 export ATOM_RESOURCE_PATH=`pwd`
 export ATOM_HOME="$npm_config_cache"
 
-_packagesToDedupe=(
-    'abbrev'
-    'amdefine'
-    'atom-space-pen-views'
-    'cheerio'
-    'domelementtype'
-    'fs-plus'
-    'grim'
-    'highlights'
-    'humanize-plus'
-    'iconv-lite'
-    'inherits'
-    'loophole'
-    'oniguruma'
-    'q'
-    'request'
-    'rimraf'
-    'roaster'
-    'season'
-    'sigmund'
-    'semver'
-    'through'
-    'temp'
-)
-
 # Installing atom dependencies
-#apm clean
 apm install --verbose
-apm dedupe ${_packagesToDedupe[@]}
+
+# Use system ctags for symbols-view
+# https://github.com/FZUG/repo/issues/211
+patch -p1 -i %{S:1}
+rm -r node_modules/symbols-view/vendor
 
 # Installing build tools
 pushd script/
@@ -176,6 +161,9 @@ find %{buildroot} -type f -regextype posix-extended \
     -name '.*?' -print -or \
     -size 0 -print | xargs rm -rf
 
+install -m644 out/app/node_modules/symbols-view/lib/ctags-config \
+  %{buildroot}%{_libdir}/%{name}/node_modules/symbols-view/lib/
+
 %post
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null ||:
 /usr/bin/update-desktop-database &>/dev/null ||:
@@ -200,6 +188,24 @@ fi
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
+* Sat Mar 11 2017 mosquito <sensor.wen@gmail.com> - 1.15.0-1.git3e457f3
+- Release 1.15.0
+* Sat Feb 11 2017 mosquito <sensor.wen@gmail.com> - 1.14.1-2.gita49cd59
+- Fix restart
+- Use system ctags for symbols-view
+* Sat Feb 11 2017 mosquito <sensor.wen@gmail.com> - 1.14.1-1.gita49cd59
+- Release 1.14.1
+- Move script to script-old, https://github.com/atom/atom/commit/6856534
+* Tue Jan 17 2017 mosquito <sensor.wen@gmail.com> - 1.13.0-1.gita357b4d
+- Release 1.13.0
+* Fri Jan 13 2017 mosquito <sensor.wen@gmail.com> - 1.12.7-3.git4573089
+- Add ctags-config file for symbols-view
+* Sun Jan  8 2017 mosquito <sensor.wen@gmail.com> - 1.12.7-2.git4573089
+- Fix jump to method causes error
+* Tue Jan  3 2017 mosquito <sensor.wen@gmail.com> - 1.12.7-1.git4573089
+- Release 1.12.7
+* Thu Dec  1 2016 mosquito <sensor.wen@gmail.com> - 1.12.6-1.git5a3d615
+- Release 1.12.6
 * Thu Oct 20 2016 mosquito <sensor.wen@gmail.com> - 1.11.2-1.git0ecc150
 - Release 1.11.2
 * Thu Oct 20 2016 mosquito <sensor.wen@gmail.com> - 1.11.1-2.git099ffef

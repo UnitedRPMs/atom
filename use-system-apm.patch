@@ -46,12 +46,12 @@
      const electronVersion = CONFIG.appMetadata.electronVersion.replace(/\.\d+$/, '')
 -    const apmVersion = CONFIG.apmMetadata.dependencies['atom-package-manager']
 +    const apmVersion = CONFIG.apmMetadata.version
-     const body = electronVersion + apmVersion + process.platform + process.version
+     const body = electronVersion + apmVersion + process.platform + process.version + process.arch
      return crypto.createHash('sha1').update(body).digest('hex')
    }
 --- a/src/package-manager.coffee
 +++ b/src/package-manager.coffee
-@@ -136,12 +136,7 @@
+@@ -140,12 +140,7 @@
      return configPath if configPath
      return @apmPath if @apmPath?
  
