@@ -21,7 +21,7 @@
 
 Name:    atom
 Version: 1.15.0
-Release: 1.git%{_shortcommit}%{?dist}
+Release: 2.git%{_shortcommit}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
@@ -188,6 +188,9 @@ fi
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
+* Sun Apr 30 2017 "UnitedRPMs autorebuilder <unitedrpms@protonmail.com>" - 1.15.0-2.git3e457f3
+- rebuilt
+
 * Sat Mar 11 2017 mosquito <sensor.wen@gmail.com> - 1.15.0-1.git3e457f3
 - Release 1.15.0
 * Sat Feb 11 2017 mosquito <sensor.wen@gmail.com> - 1.14.1-2.gita49cd59
