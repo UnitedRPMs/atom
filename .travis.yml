@@ -1,0 +1,14 @@
+mock_travis:
+  mock_config: fedora-rawhide-x86_64
+  packages_buildrequires_git: UnitedRPMs/atom
+sudo: required
+services:
+  - docker
+script:
+  - wget -q https://github.com/paulcarroty/mock-travis/releases/download/nologs/mock-travis
+    && chmod +x mock-travis
+    && (while true; do sleep 9m; echo '|'; done &) 
+    && ./mock-travis
+
+notifications:
+  slack: unitedrpms:lzDykHTpajKrgmGz9NkrO1Hj
