@@ -105,7 +105,8 @@ export ATOM_RESOURCE_PATH=`pwd`
 export ATOM_HOME="$npm_config_cache"
 
 # Installing atom dependencies
-apm install --verbose
+# apm install --verbose
+apm install 
 
 # Use system ctags for symbols-view
 # https://github.com/FZUG/repo/issues/211
