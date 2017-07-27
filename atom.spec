@@ -1,169 +1,163 @@
-# build Atom and Electron packages: https://github.com/tensor5/arch-atom
-# RPM spec: https://github.com/helber/fedora-specs
-# Error: Module version mismatch. Expected 47, got 43.
-# see https://github.com/tensor5/arch-atom/issues/3
+# This spec file is a rework/mix of other spec files (for compatiblity) PKGBUILDs and EBUILDs, and love for all to share. available from
+#  [1] https://aur.archlinux.org/packages/atom-editor-bin/
+#  [2] https://github.com/helber/fedora-specs
+
 %{?nodejs_find_provides_and_requires}
 %global arch %(test $(rpm -E%?_arch) = x86_64 && echo "x64" || echo "ia32")
 %global debug_package %{nil}
 %global _hardened_build 1
-%global __provides_exclude_from %{_libdir}/%{name}/node_modules
-%global __requires_exclude_from %{_libdir}/%{name}/node_modules
+%global __provides_exclude_from %{_datadir}/%{name}/node_modules
+%global __requires_exclude_from %{_datadir}/%{name}/node_modules
+%global __provides_exclude_from %{_datadir}/%{name}/
+%global __requires_exclude_from %{_datadir}/%{name}/
 %global __requires_exclude (npm|libnode)
 
-%global project atom
-%global repo %{project}
-%global electron_ver 1.3.13
-%global node_ver 6
+#globals for node and nodewebkit (nw)
+%global nodev 6.9.4
+
+#Electron version
+%global elev 1.3.15
+
+#defining architectures
+%ifarch x86_64
+%global platform linux64
+%global archnode linux-x64
+%else
+%global platform linux32
+%global archnode linux-x86
+%endif
 
 # commit
-%global _commit 3e457f3375b519fc0a78f593c3b96eb0e337b227
+%global _commit 783cda8642e42e842a7aac761f267e151f3db324
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
+%bcond_without no_bin
+
 Name:    atom
-Version: 1.15.0
-Release: 2.git%{_shortcommit}%{?dist}
+Version: 1.18.0
+Release: 1%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
 License: MIT
 URL:     https://atom.io/
-Source0: https://github.com/atom/atom/archive/%{_commit}/%{repo}-%{_shortcommit}.tar.gz
-Source1: use-system-ctags.patch
 
-Patch0:  fix-atom-sh.patch
-Patch1:  fix-license-path.patch
-Patch2:  fix-restart.patch
-Patch3:  use-system-apm.patch
-Patch4:  use-system-electron.patch
+%if %{with no_bin}
+Source0: https://github.com/atom/atom/archive/%{_commit}/%{name}-%{_shortcommit}.tar.gz
+%else
+Source0: https://atom-installer.github.com/v%{version}/atom-amd64.deb
+%endif
+# Sorry but we need a specific node, npm and electron for compatibility
+Source4: https://nodejs.org/dist/v%{nodev}/node-v%{nodev}-%{archnode}.tar.gz
+Source5: https://github.com/electron/electron/releases/download/v%{elev}/electron-v%{elev}-%{archnode}.zip
 
-# In fc25, the nodejs contains /bin/npm, and it do not depend node-gyp
+Patch0:  atom-python.patch
+Patch1:  startupwmclass.patch
+Patch2:  rpm_build.patch
+ExclusiveArch: %{nodejs_arches} noarch
+
 BuildRequires: git
-BuildRequires: libtool
-BuildRequires: /usr/bin/npm
-BuildRequires: node-gyp
-BuildRequires: nodejs-packaging
-BuildRequires: nodejs-atom-package-manager
+BuildRequires: libtool 
+BuildRequires: unzip 
+BuildRequires: oniguruma-devel 
+BuildRequires: python2-devel 
+BuildRequires: libsecret-devel 
+BuildRequires: libX11-devel 
 BuildRequires: libxkbfile-devel
-Requires: nodejs-atom-package-manager
-Requires: electron = %{electron_ver}
+BuildRequires: gnome-keyring
+BuildRequires: curl
+BuildRequires: xz tar
+ 
 Requires: desktop-file-utils
 Requires: gvfs
 Requires: ctags
+Requires: http-parser
+Requires: zsh
 
 %description
 Atom is a text editor that's modern, approachable, yet hack-able to the core
 - a tool you can customize to do anything but also use productively without
 ever touching a config file.
 
-Visit https://atom.io to learn more.
 
 %prep
-%setup -q -n %repo-%{_commit}
-sed -i 's|<lib>|%{_lib}|g' %{P:0} %{P:2} %{P:4}
-sed -i 's|<version>|%{electron_ver}|' %{P:0} %{P:4}
+
+%if %{with no_bin}
+%setup -q -n %name-%{_commit} -a4 
+%patch2 -p0
+mkdir -p electron-v%{elev}-%{archnode}
+unzip %{S:5} -d electron-v%{elev}-%{archnode}/
+%else
+# extract data from the deb package
+install -dm 755 %{_builddir}/%{name}-%{version}
+ar x %{SOURCE0} 
+if [ -f data.tar.xz ]; then
+tar xJf data.tar.xz -C %{_builddir}/%{name}-%{version}
+elif [ -f data.tar.gz ]; then 
+tar xmzvf data.tar.gz -C %{_builddir}/%{name}-%{version}
+fi
+%setup -T -D %{name}-%{version}
 %patch0 -p1
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-
-# They are known to leak data to GitHub, Google Analytics and Bugsnag.com.
-sed -i -E -e '/(exception-reporting|metrics)/d' package.json
+sed -i 's|env PYTHON=python2 GTK_IM_MODULE= QT_IM_MODULE= XMODIFIERS= /usr/share/atom/atom|/usr/bin/atom|' usr/share/applications/atom.desktop
+chmod -R g-w usr
+%endif
 
 %build
-# Hardened package
-export CFLAGS="%{optflags} -fPIC -pie"
-export CXXFLAGS="%{optflags} -fPIC -pie"
 
-# Update node for fc23
-%if 0%{?fedora} < 24
-%if ! 0%{?rhel}
-git clone https://github.com/creationix/nvm.git .nvm; cd .nvm
-git checkout v0.33.0; cd ..
-source .nvm/nvm.sh
-nvm install %{node_ver}
-nvm use %{node_ver}
+%if %{with no_bin}
+sed -i 's|"oniguruma": "6.1.0"|"oniguruma"|g' package.json
+
+export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
+$PWD/node-v%{nodev}-%{archnode}/bin/npm cache clean
+$PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmjs.org/
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install oniguruma
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install
+
+pushd script
+  ./build --create-rpm-package --compress-artifacts
+popd
 %endif
-%endif
 
-# Build package
-node-gyp -v; node -v; npm -v; apm -v
-
-# If unset, ~/.atom/.node-gyp/.atom/.npm is used
-## https://github.com/atom/electron/blob/master/docs/tutorial/using-native-node-modules.md
-npm_config_cache="${HOME}/.atom/.npm"
-npm_config_disturl="https://atom.io/download/atom-shell"
-npm_config_target="%{electron_ver}"
-#npm_config_target_arch="x64|ia32"
-npm_config_runtime="electron"
-
-# The npm_config_target is no effect, set ATOM_NODE_VERSION
-## https://github.com/atom/apm/blob/master/src/command.coffee
-export ATOM_ELECTRON_VERSION="%{electron_ver}"
-export ATOM_ELECTRON_URL="$npm_config_disturl"
-export ATOM_RESOURCE_PATH=`pwd`
-export ATOM_HOME="$npm_config_cache"
-
-# Installing atom dependencies
-# apm install --verbose
-apm install 
-
-# Use system ctags for symbols-view
-# https://github.com/FZUG/repo/issues/211
-patch -p1 -i %{S:1}
-rm -r node_modules/symbols-view/vendor
-
-# Installing build tools
-pushd script/
-npm install --loglevel info
-node build
+$PWD/node-v%{nodev}-%{archnode}/bin/npm config delete ca
 
 %install
-install -d %{buildroot}%{_libdir}/%{name}/
-cp -r out/app/* %{buildroot}%{_libdir}/%{name}/
-cp -r keymaps menus %{buildroot}%{_libdir}/%{name}/
-rm -rf %{buildroot}%{_libdir}/%{name}/node_modules/
 
-install -d %{buildroot}%{_datadir}/applications/
-sed -e \
-   's|<%= appName %>|Atom|
-    s|<%= description %>|%{summary}|
-    s|<%= installDir %>/share/<%= appFileName %>/||
-    s|<%= iconPath %>|%{name}|' \
-    resources/linux/atom.desktop.in > \
-    %{buildroot}%{_datadir}/applications/%{name}.desktop
+%if %{with no_bin}
+install -d %{buildroot}%{_datadir}/atom/
+cp -rf %{_builddir}/rpm_out/BUILD/Atom/* %{buildroot}%{_datadir}/atom/
+install -d -m 755 "%{buildroot}/usr/share/applications"
 
-install -Dm0755 atom.sh %{buildroot}%{_bindir}/%{name}
+# Copy the desktop file
+install -d -m 755 %{buildroot}/usr/share/applications
+install -D -m 644 %{_builddir}/rpm_out/BUILD/atom.desktop %{buildroot}/usr/share/applications/
 
 # copy over icons in sizes that most desktop environments like
-for i in 1024 512 256 128 64 48 32 24 16; do
-    install -Dm0644 resources/app-icons/stable/png/${i}.png \
-      %{buildroot}%{_datadir}/icons/hicolor/${i}x${i}/apps/%{name}.png
-done
+  for size in 16 24 32 48 64 128 256 512; do
+    install -D -m 644 %{_builddir}/rpm_out/BUILD/icons/${size}.png \
+            %{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/atom.png
+  done
+  ln -sf /share/icons/hicolor/512x512/apps/atom.png \
+      %{buildroot}/%{_datadir}/atom/resources/atom.png
 
-# find all *.js files and generate node.file-list
-pushd out/app/
-for ext in js jsm json coffee map node types less png svg aff dic; do
-    find node_modules -regextype posix-extended \
-      -iname \*.${ext} -print \
-    ! -name '.*' \
-    ! -path '*test*' \
-    ! -path '*example*' \
-    ! -path '*sample*' \
-    ! -path '*benchmark*', \
-      -regex '.*shortest_path.*' -print | \
-      xargs -i -n1 install -Dm644 '{}' '%{buildroot}%{_libdir}/%{name}/{}' ||:
-done
-popd
+  install -D -m 755 %{_builddir}/rpm_out/BUILD/atom.sh "%{buildroot}/usr/bin/atom"
 
-find %{buildroot} -type f -regextype posix-extended \
-    -regex '.*js$' -exec sh -c "sed -i '/^#\!\/usr\/bin\/env/d' '{}'" \; -or \
-    -regex '.*node$' -type f -exec strip '{}' \; -or \
-    -name '.*?' -print -or \
-    -size 0 -print | xargs rm -rf
+# Copy the license
+install -d -m 755 "%{buildroot}/usr/share/licenses/%{name}"
+export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
+node -e "require('./script/lib/get-license-text')().then((licenseText) => require('fs').writeFileSync('%{buildroot}/usr/share/licenses/%{name}/LICENSE.md', licenseText))"
 
-install -m644 out/app/node_modules/symbols-view/lib/ctags-config \
-  %{buildroot}%{_libdir}/%{name}/node_modules/symbols-view/lib/
+%else
+
+# Make destiny directories
+install -dm 755 %{buildroot}/%{_libdir} \
+%{buildroot}/%{_bindir} 
+
+cp -rf usr/ %{buildroot}/
+
+%endif
+
 
 %post
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null ||:
@@ -181,14 +175,26 @@ fi
 
 %files
 %defattr(-,root,root,-)
+%{_bindir}/%{name}
+%{_datadir}/%{name}/
+%{_datadir}/applications/%{name}.desktop
+%if %{with no_bin}
 %doc README.md CONTRIBUTING.md docs/
 %license LICENSE.md
-%{_bindir}/%{name}
-%{_libdir}/%{name}/
-%{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
+%else
+%{_bindir}/apm
+%{_docdir}/atom/copyright
+%exclude %{_datadir}/lintian/
+%{_datadir}/pixmaps/%{name}.png
+%endif
 
 %changelog
+
+* Mon Jul 24 2017 David Va <davidva AT tutanota DOT com> 1.18.0-1 
+- Updated to 1.18.0
+- New structure
+
 * Sun Apr 30 2017 "UnitedRPMs autorebuilder <unitedrpms@protonmail.com>" - 1.15.0-2.git3e457f3
 - rebuilt
 

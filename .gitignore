@@ -1,0 +1,9 @@
+BUILD/*
+BUILDROOT/*
+RPMS/*
+SPECS/*
+SRPMS/*
+atom*.tar.gz
+node*.tar.gz
+electron*.zip
+.directory
