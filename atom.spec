@@ -54,6 +54,7 @@ Source5: https://github.com/electron/electron/releases/download/v%{elev}/electro
 
 Patch0:  atom-python.patch
 Patch1:  startupwmclass.patch
+Patch2:  rpm_build.patch
 ExclusiveArch: %{nodejs_arches} noarch
 
 BuildRequires: git
@@ -84,8 +85,11 @@ ever touching a config file.
 
 %if %{with no_bin}
 %setup -q -n %name-%{_commit} -a4 
+%patch2 -p0
 mkdir -p electron-v%{elev}-%{archnode}
 unzip %{S:5} -d electron-v%{elev}-%{archnode}/
+sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
+sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
@@ -112,39 +116,24 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm cache clean
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmjs.org/
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install oniguruma
 #$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
-$PWD/node-v%{nodev}-%{archnode}/bin/npm install electron-rebuild
+#$PWD/node-v%{nodev}-%{archnode}/bin/npm install electron-rebuild
 #$PWD/node-v%{nodev}-%{archnode}/bin/npm rebuild --runtime=electron --target=%{elev} --disturl=https://atom.io/download/atom-shell --abi=49
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
-
-pushd script
-./build --install=%{_builddir}/build-rpm --verbose 2>&1
-popd
 %endif
 
 
 %install
 
 %if %{with no_bin}
-INSTALL_PREFIX=%{buildroot}%{_prefix} ; export INSTALL_PREFIX
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
-install -d %{buildroot}%{_datadir}/atom/
-cp -rf %{_builddir}/build-rpm/Atom/ %{buildroot}%{_datadir}/atom/
-install -d -m 755 "%{buildroot}/usr/share/applications"
-
-# Copy the desktop file
-install -d -m 755 %{buildroot}/usr/share/applications
-install -D -m 644 %{_builddir}/build-rpm/atom.desktop %{buildroot}/usr/share/applications/
-
+pushd script
+./build --install=%{buildroot} 
+popd
 # copy over icons in sizes that most desktop environments like
-  for size in 16 24 32 48 64 128 256 512; do
-    install -D -m 644 %{_builddir}/build-rpm/icons/${size}.png \
+  for size in 16 24 32 48 64 128 256 512 1024; do
+    install -D -m 644 resources/app-icons/stable/png/${size}.png \
             %{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/atom.png
   done
-  ln -sf /share/icons/hicolor/512x512/apps/atom.png \
-      %{buildroot}/%{_datadir}/atom/resources/atom.png
-
-  install -D -m 755 %{_builddir}/build-rpm/atom.sh "%{buildroot}/usr/bin/atom"
-
 %else
 
 # Make destiny directories
