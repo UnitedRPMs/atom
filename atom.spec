@@ -163,6 +163,7 @@ fi
 %files
 %defattr(-,root,root,-)
 %{_bindir}/%{name}
+%exclude %{_bindir}/apm
 %{_datadir}/%{name}/
 %{_datadir}/applications/%{name}.desktop
 %if %{with no_bin}
