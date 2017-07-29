@@ -12,7 +12,8 @@
 %global __requires_exclude_from %{_datadir}/%{name}/
 %global __requires_exclude (npm|libnode)
 
-#globals for node and nodewebkit (nw)
+# globals for node and nodewebkit (nw)
+# As recommendation check the specific version of node and electron in its ".travis.yml" and "package.json" for a successful build.
 %global nodev 6.9.4
 
 #Electron version
@@ -53,7 +54,6 @@ Source5: https://github.com/electron/electron/releases/download/v%{elev}/electro
 
 Patch0:  atom-python.patch
 Patch1:  startupwmclass.patch
-Patch2:  rpm_build.patch
 ExclusiveArch: %{nodejs_arches} noarch
 
 BuildRequires: git
@@ -66,7 +66,7 @@ BuildRequires: libX11-devel
 BuildRequires: libxkbfile-devel
 BuildRequires: gnome-keyring
 BuildRequires: curl
-BuildRequires: xz tar
+BuildRequires: xz tar git
  
 Requires: desktop-file-utils
 Requires: gvfs
@@ -84,7 +84,6 @@ ever touching a config file.
 
 %if %{with no_bin}
 %setup -q -n %name-%{_commit} -a4 
-%patch2 -p0
 mkdir -p electron-v%{elev}-%{archnode}
 unzip %{S:5} -d electron-v%{elev}-%{archnode}/
 %else
@@ -106,47 +105,45 @@ chmod -R g-w usr
 %build
 
 %if %{with no_bin}
-sed -i 's|"oniguruma": "6.1.0"|"oniguruma"|g' package.json
-
+#sed -i 's|"oniguruma": "6.1.0"|"oniguruma"|g' package.json
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
+$PWD/node-v%{nodev}-%{archnode}/bin/npm config set python /usr/bin/python2 
 $PWD/node-v%{nodev}-%{archnode}/bin/npm cache clean
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmjs.org/
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install oniguruma
-$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
-$PWD/node-v%{nodev}-%{archnode}/bin/npm install
+#$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install electron-rebuild
+$PWD/node-v%{nodev}-%{archnode}/bin/npm rebuild --runtime=electron --target=%{elev} --disturl=https://atom.io/download/atom-shell --abi=49
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 
 pushd script
-  ./build --create-rpm-package --compress-artifacts
+./build --install=%{_builddir}/build-rpm --verbose 2>&1
 popd
 %endif
 
-$PWD/node-v%{nodev}-%{archnode}/bin/npm config delete ca
 
 %install
 
 %if %{with no_bin}
+INSTALL_PREFIX=%{buildroot}%{_prefix} ; export INSTALL_PREFIX
+export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 install -d %{buildroot}%{_datadir}/atom/
-cp -rf %{_builddir}/rpm_out/BUILD/Atom/* %{buildroot}%{_datadir}/atom/
+cp -rf %{_builddir}/build-rpm/Atom/ %{buildroot}%{_datadir}/atom/
 install -d -m 755 "%{buildroot}/usr/share/applications"
 
 # Copy the desktop file
 install -d -m 755 %{buildroot}/usr/share/applications
-install -D -m 644 %{_builddir}/rpm_out/BUILD/atom.desktop %{buildroot}/usr/share/applications/
+install -D -m 644 %{_builddir}/build-rpm/atom.desktop %{buildroot}/usr/share/applications/
 
 # copy over icons in sizes that most desktop environments like
   for size in 16 24 32 48 64 128 256 512; do
-    install -D -m 644 %{_builddir}/rpm_out/BUILD/icons/${size}.png \
+    install -D -m 644 %{_builddir}/build-rpm/icons/${size}.png \
             %{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/atom.png
   done
   ln -sf /share/icons/hicolor/512x512/apps/atom.png \
       %{buildroot}/%{_datadir}/atom/resources/atom.png
 
-  install -D -m 755 %{_builddir}/rpm_out/BUILD/atom.sh "%{buildroot}/usr/bin/atom"
-
-# Copy the license
-install -d -m 755 "%{buildroot}/usr/share/licenses/%{name}"
-export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
-node -e "require('./script/lib/get-license-text')().then((licenseText) => require('fs').writeFileSync('%{buildroot}/usr/share/licenses/%{name}/LICENSE.md', licenseText))"
+  install -D -m 755 %{_builddir}/build-rpm/atom.sh "%{buildroot}/usr/bin/atom"
 
 %else
 
