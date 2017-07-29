@@ -135,6 +135,7 @@ popd
     install -D -m 644 resources/app-icons/stable/png/${size}.png \
             %{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/atom.png
   done
+sed -i 's|file.file<%= appFileName %>/atom||g' %{buildroot}/%{_datadir}/applications/%{name}.desktop
 %else
 
 # Make destiny directories
