@@ -113,7 +113,7 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmj
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install oniguruma
 #$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install electron-rebuild
-$PWD/node-v%{nodev}-%{archnode}/bin/npm rebuild --runtime=electron --target=%{elev} --disturl=https://atom.io/download/atom-shell --abi=49
+#$PWD/node-v%{nodev}-%{archnode}/bin/npm rebuild --runtime=electron --target=%{elev} --disturl=https://atom.io/download/atom-shell --abi=49
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 
 pushd script
