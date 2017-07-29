@@ -125,9 +125,10 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 %install
 
 %if %{with no_bin}
+install -dm 755 %{buildroot}/usr
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 pushd script
-./build --install=%{buildroot} 
+./build --install=%{buildroot}/usr 
 popd
 # copy over icons in sizes that most desktop environments like
   for size in 16 24 32 48 64 128 256 512 1024; do
