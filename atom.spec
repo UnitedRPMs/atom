@@ -90,6 +90,7 @@ mkdir -p electron-v%{elev}-%{archnode}
 unzip %{S:5} -d electron-v%{elev}-%{archnode}/
 sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
 sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
+sed -i 's|"atom-package-manager": "1.18.1"|"atom-package-manager": "1.18.3"|g' apm/package.json
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
