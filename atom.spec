@@ -36,7 +36,7 @@
 
 Name:    atom
 Version: 1.18.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
@@ -87,10 +87,9 @@ ever touching a config file.
 %setup -q -n %name-%{_commit} -a4 
 %patch2 -p0
 mkdir -p electron-v%{elev}-%{archnode}
-unzip %{S:5} -d electron-v%{elev}-%{archnode}/
+#unzip %{S:5} -d electron-v%{elev}-%{archnode}/
 sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
 sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
-sed -i 's|"atom-package-manager": "1.18.1"|"atom-package-manager": "1.18.3"|g' apm/package.json
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
@@ -110,15 +109,23 @@ chmod -R g-w usr
 %build
 
 %if %{with no_bin}
-#sed -i 's|"oniguruma": "6.1.0"|"oniguruma"|g' package.json
+
+# get nvm
+
+git clone git://github.com/creationix/nvm.git ~/nvm
+
+# activate nvm
+
+echo "source ~/nvm/nvm.sh" >> ~/.bashrc
+
+source ~/.bashrc
+nvm install 6.9.4
+nvm use 6.9.4
+
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set python /usr/bin/python2 
 $PWD/node-v%{nodev}-%{archnode}/bin/npm cache clean
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmjs.org/
-$PWD/node-v%{nodev}-%{archnode}/bin/npm install oniguruma
-#$PWD/node-v%{nodev}-%{archnode}/bin/npm install https://github.com/atom/keyboard-layout.git
-#$PWD/node-v%{nodev}-%{archnode}/bin/npm install electron-rebuild
-#$PWD/node-v%{nodev}-%{archnode}/bin/npm rebuild --runtime=electron --target=%{elev} --disturl=https://atom.io/download/atom-shell --abi=49
 $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 %endif
 
@@ -181,7 +188,10 @@ fi
 
 %changelog
 
-* Mon Jul 24 2017 David Va <davidva AT tutanota DOT com> 1.18.0-1 
+* Wed Aug 02 2017 David Va <davidva AT tutanota DOT com> 1.18.0-2.git783cda8 
+- Rebuilt using nvm
+
+* Mon Jul 24 2017 David Va <davidva AT tutanota DOT com> 1.18.0-1.git783cda8 
 - Updated to 1.18.0
 - New structure
 
