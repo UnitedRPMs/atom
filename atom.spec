@@ -29,14 +29,14 @@
 %endif
 
 # commit
-%global _commit 783cda8642e42e842a7aac761f267e151f3db324
+%global _commit 995b0737abce58f9ec6a4cdee7503a12cbc4fa5b
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 %bcond_without no_bin
 
 Name:    atom
-Version: 1.18.0
-Release: 2%{?dist}
+Version: 1.19.0
+Release: 1%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
@@ -50,7 +50,7 @@ Source0: https://atom-installer.github.com/v%{version}/atom-amd64.deb
 %endif
 # Sorry but we need a specific node, npm and electron for compatibility
 Source4: https://nodejs.org/dist/v%{nodev}/node-v%{nodev}-%{archnode}.tar.gz
-Source5: https://github.com/electron/electron/releases/download/v%{elev}/electron-v%{elev}-%{archnode}.zip
+# Source5: https://github.com/electron/electron/releases/download/v%{elev}/electron-v%{elev}-%{archnode}.zip
 
 Patch0:  atom-python.patch
 Patch1:  startupwmclass.patch
@@ -188,11 +188,13 @@ fi
 
 %changelog
 
-* Wed Aug 02 2017 David Va <davidva AT tutanota DOT com> 1.18.0-2.git783cda8 
+* Sun Aug 13 2017 David Va <davidva AT tutanota DOT com> 1.19.0-1
+- Updated to 1.19.0-1
+
+* Wed Aug 02 2017 David Va <davidva AT tutanota DOT com> 1.18.0-2
 - Rebuilt using nvm
 
-* Mon Jul 24 2017 David Va <davidva AT tutanota DOT com> 1.18.0-1.git783cda8 
-- Updated to 1.18.0
+* Mon Jul 24 2017 David Va <davidva AT tutanota DOT com> 1.18.0-1
 - New structure
 
 * Sun Apr 30 2017 "UnitedRPMs autorebuilder <unitedrpms@protonmail.com>" - 1.15.0-2.git3e457f3
