@@ -35,8 +35,8 @@
 %bcond_without no_bin
 
 Name:    atom
-Version: 1.19.0
-Release: 1%{?dist}
+Version: 1.20.1
+Release: 1%{?gver}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
@@ -187,6 +187,9 @@ fi
 %endif
 
 %changelog
+
+* Mon Oct 02 2017 David Va <davidva AT tutanota DOT com> 1.20.1-1
+- Updated to 1.20.1
 
 * Sun Aug 13 2017 David Va <davidva AT tutanota DOT com> 1.19.0-1
 - Updated to 1.19.0-1
