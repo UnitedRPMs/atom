@@ -68,6 +68,7 @@ BuildRequires: libxkbfile-devel
 BuildRequires: gnome-keyring
 BuildRequires: curl
 BuildRequires: xz tar git
+BuildRequires: gtk2-devel
  
 Requires: desktop-file-utils
 Requires: gvfs
