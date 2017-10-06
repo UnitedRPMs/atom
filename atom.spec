@@ -69,9 +69,10 @@ BuildRequires: gnome-keyring
 BuildRequires: curl
 BuildRequires: xz tar git
 # new build requires
-BuildRequires: gtk2-devel
-BuildRequires: libXScrnSaver-devel
+BuildRequires: gtk2
+BuildRequires: libXScrnSaver
 BuildRequires: GConf2
+BuildRequires: alsa-lib
  
 Requires: desktop-file-utils
 Requires: gvfs
