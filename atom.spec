@@ -147,7 +147,7 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 %install
 
 %if %{with no_bin}
-install -dm 755 %{buildroot}/usr
+install -dm 755 %{buildroot}/usr/share/icons/hicolor
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 sed -i 's|/usr/share/icons/hicolor|%{buildroot}/usr/share/icons/hicolor|g' script/lib/install-application.js
 pushd script
