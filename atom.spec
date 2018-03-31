@@ -99,7 +99,6 @@ mkdir -p electron-v%{elev}-%{archnode}
 #unzip {S:5} -d electron-v{elev}-{archnode}/
 sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
 sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
-sed -i 's|/usr/share/icons/hicolor|usr/share/icons/hicolor|g' script/lib/install-application.js
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
@@ -150,6 +149,7 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 %if %{with no_bin}
 install -dm 755 %{buildroot}/usr
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
+sed -i 's|/usr/share/icons/hicolor|%{buildroot}/usr/share/icons/hicolor|g' script/lib/install-application.js
 pushd script
 ./build --install=%{buildroot}/usr 
 popd
