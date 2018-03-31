@@ -29,14 +29,15 @@
 %endif
 
 # commit
-%global _commit 9b733c8c78798b418339cde30c42f056bfe072c0
+%global _commit 74fc8ebf458175e8eeb6da0768bc744a4fb3668c
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 %bcond_without no_bin
+%bcond_without clang
 
 Name:    atom
-Version: 1.24.0
-Release: 1%{?gver}%{?dist}
+Version: 1.25.0
+Release: 0.1%{?gver}%{?dist}
 Summary: A hack-able text editor for the 21st century
 
 Group:   Applications/Editors
@@ -73,6 +74,9 @@ BuildRequires: gtk2
 BuildRequires: libXScrnSaver
 BuildRequires: GConf2
 BuildRequires: alsa-lib
+%if %{with clang} 
+BuildRequires: clang llvm
+%endif
  
 Requires: desktop-file-utils
 Requires: gvfs
@@ -92,9 +96,10 @@ ever touching a config file.
 %setup -q -n %name-%{_commit} -a4 
 %patch2 -p0
 mkdir -p electron-v%{elev}-%{archnode}
-#unzip %{S:5} -d electron-v%{elev}-%{archnode}/
+#unzip {S:5} -d electron-v{elev}-{archnode}/
 sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
 sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
+sed -i 's|/usr/share/icons/hicolor|usr/share/icons/hicolor|g' script/lib/install-application.js
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
@@ -126,6 +131,11 @@ echo "source ~/nvm/nvm.sh" >> ~/.bashrc
 source ~/.bashrc
 nvm install 6.9.4
 nvm use 6.9.4
+
+%if %{with clang}
+export CC=clang
+export CXX=clang++
+%endif
 
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set python /usr/bin/python2 
@@ -192,6 +202,9 @@ fi
 %endif
 
 %changelog
+
+* Sat Feb 17 2018 David Va <davidva AT tutanota DOT com> 1.25.0-1
+- Updated to 1.25.0
 
 * Wed Feb 14 2018 David Va <davidva AT tutanota DOT com> 1.24.0-1
 - Updated to 1.24.0
