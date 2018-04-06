@@ -1,13 +1,10 @@
 # Atom
 
-[![Build Status](https://travis-ci.org/UnitedRPMs/atom.svg?branch=master)](https://travis-ci.org/UnitedRPMs/atom)
+[![Run Status](https://api.shippable.com/projects/58e99ab064421007001c6c15/badge?branch=master)](https://app.shippable.com/github/UnitedRPMs/atom)
 
 A hackable text editor for the 21st Century
 
 
-[![UnitedRPMs Fedora 26 package](https://repology.org/badge/version-for-repo/unitedrpms_26/atom.svg)](https://repology.org/metapackage/atom)
-
-[![UnitedRPMs Fedora 27 package](https://repology.org/badge/version-for-repo/unitedrpms_27/atom.svg)](https://repology.org/metapackage/atom) [![UnitedRPMs Fedora 28 package](https://repology.org/badge/version-for-repo/unitedrpms_28/atom.svg)](https://repology.org/metapackage/atom)
 
 
 

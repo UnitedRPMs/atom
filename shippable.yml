@@ -1,0 +1,28 @@
+# Build Environment
+
+language: python
+
+python:
+  - 2.7
+
+install: true
+
+build:
+  pre_ci_boot:
+    image_name: davidva/unibuild-27
+    image_tag: latest
+    pull: true
+    env: LM=ML 
+    options: "-e HOME=/root" 
+
+# commands in this section run inside your CI container. In addition, any commands such as ls, in this section can be used to skip default processing #for CI.
+  ci:
+    # Here you'd place anything you want to test. 
+    - docker run --privileged=true --cap-add=SYS_ADMIN -v $(pwd):/root/enjoy/ davidva/unibuild-27 /bin/sh -c "rm -f /urpms && wget -c https://raw.githubusercontent.com/kuboosoft/united-build/master/urpms && chmod a+x urpms && /urpms -g UnitedRPMs/atom -s atom.spec -r true -d 'dist .fc27' -u true"
+notifications:
+email: davidva@tutanota.com
+# slack: unitedrpms:lzDykHTpajKrgmGz9NkrO1Hj
+
+
+
+
