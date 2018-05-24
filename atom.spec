@@ -74,6 +74,7 @@ BuildRequires: gtk2
 BuildRequires: libXScrnSaver
 BuildRequires: GConf2
 BuildRequires: alsa-lib
+BuildRequires: nss
 %if %{with clang} 
 BuildRequires: clang llvm
 %endif
