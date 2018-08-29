@@ -1,0 +1,10 @@
+--- a/apm/package.json	2018-07-30 16:09:22.000000000 -0600
++++ b/apm/package2.json	2018-08-29 00:57:16.161306733 -0600
+@@ -6,6 +6,6 @@
+     "url": "https://github.com/atom/atom.git"
+   },
+   "dependencies": {
+-    "atom-package-manager": "1.19.0"
++    "atom-package-manager": "git+https://github.com/kuboosoft/apm.git"
+   }
+ }

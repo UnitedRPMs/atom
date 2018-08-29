@@ -78,6 +78,9 @@ BuildRequires: nss
 %if %{with clang} 
 BuildRequires: clang llvm
 %endif
+%if 0%{?fedora} >= 29
+BuildRequires: python-unversioned-command
+%endif
  
 Requires: desktop-file-utils
 Requires: gvfs
