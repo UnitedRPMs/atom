@@ -29,14 +29,14 @@
 %endif
 
 # commit
-%global _commit 82d456ad7387ff1610e84dfea6948a9216819746
+%global _commit 5479e1c78989b9a5a79bed9780b7b58b1461afa1
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 %bcond_without no_bin
 %bcond_without clang
 
 Name:    atom
-Version: 1.29.0
+Version: 1.30.0
 Release: 2%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -206,6 +206,9 @@ fi
 %endif
 
 %changelog
+
+* Thu Sep 06 2018 David Va <davidva AT tuta DOT io> 1.30.0-2
+- Updated to 1.30.0
 
 * Wed Aug 01 2018 David Va <davidva AT tuta DOT io> 1.29.0-2
 - Updated to 1.29.0
