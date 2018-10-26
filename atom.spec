@@ -11,6 +11,7 @@
 %global __provides_exclude_from %{_datadir}/%{name}/
 %global __requires_exclude_from %{_datadir}/%{name}/
 %global __requires_exclude (npm|libnode)
+%global __brp_mangle_shebangs_exclude_from %{_datadir}/atom/resources/app/apm/node_modules
 
 # globals for node and nodewebkit (nw)
 # As recommendation check the specific version of node and electron in its ".travis.yml" and "package.json" for a successful build.
@@ -29,14 +30,14 @@
 %endif
 
 # commit
-%global _commit 5f459ceb800e781a0172370e8c0c301b1b79a53e
+%global _commit e131ba994b68874a308200e7be372e56962b2100
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 %bcond_without no_bin
 %bcond_without clang
 
 Name:    atom
-Version: 1.31.0
+Version: 1.32.0
 Release: 2%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -51,11 +52,11 @@ Source0: https://atom-installer.github.com/v%{version}/atom-amd64.deb
 %endif
 # Sorry but we need a specific node, npm and electron for compatibility
 Source4: https://nodejs.org/dist/v%{nodev}/node-v%{nodev}-%{archnode}.tar.gz
-# Source5: https://github.com/electron/electron/releases/download/v%{elev}/electron-v%{elev}-%{archnode}.zip
 
 Patch0:  atom-python.patch
 Patch1:  startupwmclass.patch
 Patch2:  rpm_build.patch
+Patch3:  desktop_fix.patch
 ExclusiveArch: %{nodejs_arches} noarch
 
 BuildRequires: git
@@ -99,10 +100,8 @@ ever touching a config file.
 %if %{with no_bin}
 %setup -q -n %name-%{_commit} -a4 
 %patch2 -p0
+%patch3 -p1
 mkdir -p electron-v%{elev}-%{archnode}
-#unzip {S:5} -d electron-v{elev}-{archnode}/
-sed -i 's|Exec=<%= installDir %>/share/|Exec=/usr/share/atom/atom %F|g' resources/linux/atom.desktop.in
-sed -i 's|Icon=<%= iconPath %>|Icon=atom|g' resources/linux/atom.desktop.in
 %else
 # extract data from the deb package
 install -dm 755 %{_builddir}/%{name}-%{version}
@@ -115,13 +114,15 @@ fi
 %setup -T -D %{name}-%{version}
 %patch0 -p1
 %patch1 -p1
-sed -i 's|env PYTHON=python2 GTK_IM_MODULE= QT_IM_MODULE= XMODIFIERS= /usr/share/atom/atom|/usr/bin/atom|' usr/share/applications/atom.desktop
+sed -i 's|env PYTHON=python2 GTK_IM_MODULE= QT_IM_MODULE= XMODIFIERS= /%{_datadir}/atom/atom|/usr/bin/atom|' %{_datadir}/applications/atom.desktop
 chmod -R g-w usr
 %endif
 
 %build
 
 %if %{with no_bin}
+
+sed -i 's|/usr/share/icons/hicolor|%{buildroot}%{_datadir}/icons/hicolor|g' script/lib/install-application.js
 
 # get nvm
 
@@ -151,16 +152,16 @@ $PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
 %install
 
 %if %{with no_bin}
-install -dm 755 %{buildroot}/usr/share/icons/hicolor
+install -dm 755 %{buildroot}/%{_datadir}/icons/hicolor
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
-sed -i 's|/usr/share/icons/hicolor|%{buildroot}/usr/share/icons/hicolor|g' script/lib/install-application.js
+
 pushd script
 ./build --install=%{buildroot}/usr 
 popd
 # copy over icons in sizes that most desktop environments like
   for size in 16 24 32 48 64 128 256 512 1024; do
     install -D -m 644 resources/app-icons/stable/png/${size}.png \
-            %{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/atom.png
+            %{buildroot}/%{_datadir}/icons/hicolor/${size}x${size}/apps/atom.png
   done
 sed -i 's|file.file<%= appFileName %>/atom||g' %{buildroot}/%{_datadir}/applications/%{name}.desktop
 %else
@@ -173,6 +174,58 @@ cp -rf usr/ %{buildroot}/
 
 %endif
 
+# FIX mangle shebangs APM 
+sed -i 's|/bin/sh|/usr/bin/sh|g' %{buildroot}/%{_bindir}/atom
+
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app.asar.unpacked/node_modules/github/bin/git-askpass-atom.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app.asar.unpacked/node_modules/github/bin/git-credential-atom.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/script/download-node.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/request/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/rc/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/request/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/rc/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sntp/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sntp/lib/index.js
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sntp/package.json
+sed -i '1 i\#!/usr/bin/node' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/cryptiles/lib/index.js
+
+
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/sshpk/bin/sshpk-conv 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/sshpk/bin/sshpk-sign 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/sshpk/bin/sshpk-verify 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/uuid/bin/uuid 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/ncp/bin/ncp 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/first-mate/node_modules/season/bin/csonc 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/semver/bin/semver
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sshpk/bin/sshpk-conv 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sshpk/bin/sshpk-sign 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/sshpk/bin/sshpk-verify 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/uuid/bin/uuid 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/semver/bin/semver 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/which/bin/which 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/npm/node_modules/node-gyp/node_modules/semver/bin/semver 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/decompress-zip/bin/decompress-zip 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/which/bin/which 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/asar/bin/asar 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/coffee-script/bin/coffee 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/coffee-script/bin/cake 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/season/bin/csonc 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/season/node_modules/coffee-script/bin/coffee
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/season/node_modules/coffee-script/bin/cake 
+sed -i 's|/usr/bin/env node|/usr/bin/node|g' %{buildroot}/%{_datadir}/atom/resources/app/apm/node_modules/mv/node_modules/ncp/bin/ncp 
+
+pushd %{buildroot}/%{_datadir}/%{name}/resources
+
+# Is executable but has empty or no shebang
+find ./ -name "*.js" -exec sed -i 's|/usr/bin/env node|/usr/bin/node|g' {} \;
+
+# ERROR ambiguous python
+find ./ -name "*.py" -exec sed -i 's|/usr/bin/env python|/usr/bin/python2|g' {} \;
+
+# is executable but has empty or no shebang
+find ./ -name "*.sh" -exec sed -i 's|/bin/sh|/usr/bin/sh|g' {} \;
+find ./ -name "*.sample" -exec sed -i 's|/bin/sh|/usr/bin/sh|g' {} \;
+popd
 
 %post
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null ||:
@@ -206,6 +259,9 @@ fi
 %endif
 
 %changelog
+
+* Mon Oct 22 2018 David Va <davidva AT tuta DOT io> 1.32.0-2
+- Updated to 1.32.0
 
 * Thu Sep 27 2018 David Va <davidva AT tuta DOT io> 1.31.0-2
 - Updated to 1.31.0

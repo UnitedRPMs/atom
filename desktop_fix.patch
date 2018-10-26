@@ -1,0 +1,13 @@
+--- a/resources/linux/atom.desktop.in	2018-10-22 18:37:11.000000000 -0600
++++ b/resources/linux/new.in	2018-10-24 18:02:19.876343821 -0600
+@@ -2,8 +2,8 @@
+ Name=<%= appName %>
+ Comment=<%= description %>
+ GenericName=Text Editor
+-Exec=<%= installDir %>/bin/<%= appFileName %> %F
+-Icon=<%= iconPath %>
++Exec=/usr/share/atom/atom %F
++Icon=atom
+ Type=Application
+ StartupNotify=true
+ Categories=GNOME;GTK;Utility;TextEditor;Development;
