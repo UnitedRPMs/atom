@@ -30,14 +30,14 @@
 %endif
 
 # commit
-%global _commit 1b0757286c619ef604daf74cf59bfec836ede8a5
+%global _commit f818c3a2e09c8dff4a905879779c8d2a3b578281
 %global _shortcommit %(c=%{_commit}; echo ${c:0:7})
 
 %bcond_without no_bin
 %bcond_without clang
 
 Name:    atom
-Version: 1.34.0
+Version: 1.36.0
 Release: 2%{?dist}
 Summary: A hack-able text editor for the 21st century
 
