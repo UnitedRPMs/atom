@@ -15,7 +15,7 @@
 
 # globals for node and nodewebkit (nw)
 # As recommendation check the specific version of node and electron in its ".travis.yml" and "package.json" for a successful build.
-%global nodev 6.9.4
+%global nodev 8.9.3
 
 #Electron version
 %global elev 1.3.15
@@ -133,8 +133,8 @@ git clone git://github.com/creationix/nvm.git ~/nvm
 echo "source ~/nvm/nvm.sh" >> ~/.bashrc
 
 source ~/.bashrc
-nvm install 6.9.4
-nvm use 6.9.4
+nvm install 8.9.3
+nvm use --delete-prefix 8.9.3
 
 %if %{with clang}
 export CC=clang
@@ -143,9 +143,11 @@ export CXX=clang++
 
 export PATH=$PATH:$PWD/node-v%{nodev}-%{archnode}/bin:$PWD/electron-v%{elev}-%{archnode}/:/usr/bin/
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set python /usr/bin/python2 
-$PWD/node-v%{nodev}-%{archnode}/bin/npm cache clean
 $PWD/node-v%{nodev}-%{archnode}/bin/npm config set registry http://registry.npmjs.org/
-$PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@5.3.0
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install npm@latest --force
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install colors
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install coffeelint
+$PWD/node-v%{nodev}-%{archnode}/bin/npm install sync-request
 %endif
 
 
