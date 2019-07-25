@@ -37,7 +37,7 @@
 %bcond_without clang
 
 Name:    atom
-Version: 1.38.2
+Version: 1.39.0
 Release: 2%{?dist}
 Summary: A hack-able text editor for the 21st century
 
@@ -261,6 +261,9 @@ fi
 %endif
 
 %changelog
+
+* Tue Jun 25 2019 David Va <davidva AT tuta DOT io> 1.39.0-2
+- Updated to 1.39.0
 
 * Tue Jun 25 2019 David Va <davidva AT tuta DOT io> 1.38.2-2
 - Updated to 1.38.2
